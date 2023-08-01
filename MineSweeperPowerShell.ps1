@@ -1,15 +1,28 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-function Game {
+
+function Game ($rows, $columns, $mines){
+
 	$form = New-Object System.Windows.Forms.Form
 	$form.StartPosition = 'CenterScreen'
 	$form.FormBorderStyle = "FixedSingle"
-
-	$form.ClientSize = New-Object System.Drawing.Size(420,450)
-	$rows = 16
-	$columns = 16
-	$mines = 40
+	$form.ClientSize = New-Object System.Drawing.Size((($columns*25)+20),(($rows*25)+50))
+	
+	function NewGame {
+		$form.Dispose()
+		Menu
+	}
+	
+	$newGameButton = New-Object System.Windows.Forms.Button
+	$newGameButton.Size = New-Object System.Drawing.Size(75,23)
+	$newGameButton.Location = New-Object System.Drawing.Point(10,0)
+	$newGameButton.Text = "New Game"
+	$newGameButton.add_click({
+		NewGame
+	})
+	$form.Controls.Add($newGameButton)
+	
 	$global:board = @()
 	$notMines = ($rows * $columns) - $mines
 	function OnClick ($button) {
@@ -257,14 +270,57 @@ function Game {
 		}
 	}
 	CountMines
-
+	
+	<#
 	$board | ForEach-Object {
 		Write-Host -NoNewLine $_.Tag
-		if (([int]$_.Name % 15) -eq 0) {
+		if ((([int]$_.Name+1) % $columns) -eq 0) {
 			Write-Host
 		}
 	}
+	#>
 	$result = $form.ShowDialog()
 	$form.Dispose()
 }
-Game
+
+function Menu {
+	$form = New-Object System.Windows.Forms.Form
+	$form.StartPosition = 'CenterScreen'
+	$form.FormBorderStyle = "FixedSingle"
+	$form.ClientSize = New-Object System.Drawing.Size(185,82)
+	
+	$beginnerButton = New-Object System.Windows.Forms.Button
+	$beginnerButton.Size = New-Object System.Drawing.Size(75,23)
+	$beginnerButton.Location = New-Object System.Drawing.Point(10,10)
+	$beginnerButton.Text = "Beginner"
+	$beginnerButton.add_click({
+		$form.Dispose()
+		Game 9 9 10
+	})
+	$form.Controls.Add($beginnerButton)
+	
+	$intermediateButton = New-Object System.Windows.Forms.Button
+	$intermediateButton.Size = New-Object System.Drawing.Size(75,23)
+	$intermediateButton.Location = New-Object System.Drawing.Point(100,10)
+	$intermediateButton.Text = "Intermediate"
+	$intermediateButton.add_click({
+		$form.Dispose()
+		Game 16 16 40
+	})
+	$form.Controls.Add($intermediateButton)
+	
+	$expertButton = New-Object System.Windows.Forms.Button
+	$expertButton.Size = New-Object System.Drawing.Size(75,23)
+	$expertButton.Location = New-Object System.Drawing.Point(55,50)
+	$expertButton.Text = "Expert"
+	$expertButton.add_click({
+		$form.Dispose()
+		Game 16 30 99
+	})
+	$form.Controls.Add($expertButton)
+	
+	$result = $form.ShowDialog()
+	$form.Dispose()
+}
+
+Menu
