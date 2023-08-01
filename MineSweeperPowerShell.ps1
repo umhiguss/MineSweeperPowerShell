@@ -1,6 +1,29 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+$highscorePath = [Environment]::GetFolderPath("ApplicationData") + "\MineSweeperPowershell"
+if (!(Test-Path $highscorePath)) {
 
+	New-Item -Path $highscorePath -ItemType Directory | Out-Null
+}
+$csvPath = $highscorePath + "\HighScores.csv"
+if (!(Test-Path $csvPath)) {
+
+	$a = [PsCustomObject]@{
+		Difficulty = "Beginner"
+		Time = -1
+	}
+	$b = [PsCustomObject]@{
+		Difficulty = "Intermediate"
+		Time = -1
+	}
+	$c = [PsCustomObject]@{
+		Difficulty = "Expert"
+		Time = -1
+	}
+	$fourthLetterOfTheAlphabet = $a, $b, $c
+	$fourthLetterOfTheAlphabet | Export-Csv -Path $csvPath -noTypeInformation
+}
+$global:csvData = Import-Csv -Path $csvPath
 function Game ($rows, $columns, $mines){
 
 	$form = New-Object System.Windows.Forms.Form
@@ -22,8 +45,21 @@ function Game ($rows, $columns, $mines){
 	})
 	$form.Controls.Add($newGameButton)
 	
+	$highScoreLabel = New-Object System.Windows.Forms.Label
+	$highScoreLabel.Location = New-Object System.Drawing.Point(($form.Width - 115),5)
+	$highScoreLabel.Size = New-Object System.Drawing.Size(100, 20)
+	if ($mines -eq 10) {$diff = "Beginner"} elseif ($mines -eq 40) {$diff = "Intermediate"} else {$diff = "Expert"}
+	$time = $csvData | Where-Object {$_.Difficulty -eq $diff} | ForEach-Object {$_.Time}
+	if ($time -ne -1) {
+		$highScoreLabel.Text = "High Score: "
+		$highScoreLabel.Text += ("{0:d2}" -f [int][Math]::Floor($time/60))
+		$highScoreLabel.Text += ":"
+		$highScoreLabel.Text += ("{0:d2}" -f ($time%60))
+	}
+	$form.Controls.Add($highScoreLabel)
+
 	$minesRemaining = New-Object System.Windows.Forms.Label
-	$minesRemaining.Location = New-Object System.Drawing.Point(100, ($form.Height - 60))
+	$minesRemaining.Location = New-Object System.Drawing.Point(60, ($form.Height - 60))
 	$minesRemaining.Text = "Mines: $mines"
 	$form.Controls.Add($minesRemaining)
 	
@@ -80,8 +116,20 @@ function Game ($rows, $columns, $mines){
 						if ($_.Tag -eq 'X') {
 							$_.BackColor = "LightGreen"
 							$_.Text = 'X'
+						}
 					}
-				}
+					if ($mines -eq 10) {$diff = "Beginner"} elseif ($mines -eq 40) {$diff = "Intermediate"} else {$diff = "Expert"}
+					$time = $csvData | Where-Object {$_.Difficulty -eq $diff} | ForEach-Object {$_.Time}
+					if (($seconds -lt $time) -or ($time -eq -1)) {
+						$csvData | Where-Object {$_.Difficulty -eq $diff} | ForEach-Object {$_.Time = $seconds}
+						Write-Host "New High Score!"
+						$csvData | Export-Csv -Path $csvPath -noTypeInformation -Force
+						$highScoreLabel.ForeColor = "Green"
+						$highScoreLabel.Text = "High Score: "
+						$highScoreLabel.Text += ("{0:d2}" -f [int][Math]::Floor($seconds/60))
+						$highScoreLabel.Text += ":"
+						$highScoreLabel.Text += ("{0:d2}" -f ($seconds%60))
+					}
 				}
 				if ($board[$button].Tag -ne 0) {
 					$board[$button].Text = $board[$button].Tag
@@ -191,6 +239,9 @@ function Game ($rows, $columns, $mines){
 				$button.Name = $number
 				$button.Tag = 0
 				$button.add_click({
+					if (!($timer.Enabled)) {
+						$timer.Start()
+					}
 					OnClick([int]$this.Name)
 				})
 				# button doesn't call click on right click so you have to do
@@ -320,7 +371,6 @@ function Game ($rows, $columns, $mines){
 		}
 	}
 	#>
-	$timer.Start()
 	$result = $form.ShowDialog()
 	$form.Dispose()
 }
