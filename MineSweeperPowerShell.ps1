@@ -1,7 +1,6 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-
 function Game ($rows, $columns, $mines){
 
 	$form = New-Object System.Windows.Forms.Form
@@ -24,21 +23,41 @@ function Game ($rows, $columns, $mines){
 	$form.Controls.Add($newGameButton)
 	
 	$minesRemaining = New-Object System.Windows.Forms.Label
-	$minesRemaining.Location = New-Object System.Drawing.Point(10, ($form.Height - 60))
+	$minesRemaining.Location = New-Object System.Drawing.Point(100, ($form.Height - 60))
 	$minesRemaining.Text = "Mines: $mines"
 	$form.Controls.Add($minesRemaining)
+	
+	$timerDisplay = New-Object System.Windows.Forms.Label
+	$timerDisplay.Location = New-Object System.Drawing.Point(10, ($form.Height - 60))
+	$timerDisplay.Text = "00:00"
+	$form.Controls.Add($timerDisplay)
+	
+	$global:seconds = 0
+	$timer = New-Object System.Windows.Forms.timer
+	$timer.Interval = 1000
+	$timer.add_tick({
+		
+		$global:seconds++
+		$clock = ("{0:d2}" -f [int][Math]::Floor($seconds/60))
+		$clock += ":"
+		$clock += ("{0:d2}" -f ($seconds%60))
+		$timerDisplay.Text = $clock
+	})
 	
 	$global:board = @()
 	$global:notMines = ($rows * $columns) - $mines
 	function OnClick ($button) {
 		if ($board[$button].Enabled) {
+			$board[$button].Enabled = $false
 			if ($board[$button].Text -eq 'O') {
 				$board[$button].Text = ''
 				$minesRemaining.Text = $minesRemaining.Text.Replace($minesRemaining.Text.Split(":")[1], ++([int]$minesRemaining.Text.Split(":")[1]))
 			}
+			
 			# Clicked mine
-			$board[$button].Enabled = $false
 			if ($board[$button].Tag -eq 'X') {
+				$timer.Stop()
+				$timerDisplay.ForeColor = "Red"
 				$board[$button].BackColor = "Red"
 				$board[$button].Text = 'X'
 				$board | ForEach-Object {
@@ -52,9 +71,17 @@ function Game ($rows, $columns, $mines){
 				$board[$button].BackColor = "Gray"
 				$board[$button].FlatStyle = "Flat"
 				$global:notMines--
-				Write-Host $notMines
 				if ($notMines -eq 0) {
 					Write-Host "You win smile"
+					$timer.Stop()
+					$timerDisplay.ForeColor = "Green"
+					$board | ForEach-Object {
+						$_.Enabled = $false
+						if ($_.Tag -eq 'X') {
+							$_.BackColor = "LightGreen"
+							$_.Text = 'X'
+					}
+				}
 				}
 				if ($board[$button].Tag -ne 0) {
 					$board[$button].Text = $board[$button].Tag
@@ -293,6 +320,7 @@ function Game ($rows, $columns, $mines){
 		}
 	}
 	#>
+	$timer.Start()
 	$result = $form.ShowDialog()
 	$form.Dispose()
 }
