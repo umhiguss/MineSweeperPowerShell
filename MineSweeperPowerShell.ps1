@@ -23,10 +23,19 @@ function Game ($rows, $columns, $mines){
 	})
 	$form.Controls.Add($newGameButton)
 	
+	$minesRemaining = New-Object System.Windows.Forms.Label
+	$minesRemaining.Location = New-Object System.Drawing.Point(10, ($form.Height - 60))
+	$minesRemaining.Text = "Mines: $mines"
+	$form.Controls.Add($minesRemaining)
+	
 	$global:board = @()
-	$notMines = ($rows * $columns) - $mines
+	$global:notMines = ($rows * $columns) - $mines
 	function OnClick ($button) {
 		if ($board[$button].Enabled) {
+			if ($board[$button].Text -eq 'O') {
+				$board[$button].Text = ''
+				$minesRemaining.Text = $minesRemaining.Text.Replace($minesRemaining.Text.Split(":")[1], ++([int]$minesRemaining.Text.Split(":")[1]))
+			}
 			# Clicked mine
 			$board[$button].Enabled = $false
 			if ($board[$button].Tag -eq 'X') {
@@ -42,7 +51,8 @@ function Game ($rows, $columns, $mines){
 			else {
 				$board[$button].BackColor = "Gray"
 				$board[$button].FlatStyle = "Flat"
-				$notMines--
+				$global:notMines--
+				Write-Host $notMines
 				if ($notMines -eq 0) {
 					Write-Host "You win smile"
 				}
@@ -132,9 +142,13 @@ function Game ($rows, $columns, $mines){
 	}
 	function OnRightClick ($button) {
 		if ($board[$button].Text -eq 'O') {
+			$newMines = ++([int]$minesRemaining.Text.Split(":")[1])
+			$minesRemaining.Text = $minesRemaining.Text.Replace($minesRemaining.Text.Split(":")[1], " $newMines")
 			$board[$button].Text = ''
 		}
 		else {
+			$newMines = --([int]$minesRemaining.Text.Split(":")[1])
+			$minesRemaining.Text = $minesRemaining.Text.Replace($minesRemaining.Text.Split(":")[1], " $newMines")
 			$board[$button].Text = 'O'
 		}
 	}
